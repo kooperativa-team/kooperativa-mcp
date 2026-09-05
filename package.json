@@ -1,0 +1,51 @@
+{
+  "name": "@kooperativa_team/mcp-server",
+  "version": "0.1.2",
+  "description": "MCP server for the Kooperativa API — enrich and search professional profiles and companies, track hiring signals and job changes, and manage webhook monitors, directly from your AI assistant.",
+  "type": "module",
+  "bin": {
+    "kooperativa-mcp": "dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://kooperativa.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kooperativa-team/kooperativa-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kooperativa-team/kooperativa-mcp/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "kooperativa",
+    "b2b",
+    "enrichment",
+    "data-enrichment"
+  ],
+  "author": "Kooperativa",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.9",
+    "typescript": "^5.7.3"
+  }
+}
