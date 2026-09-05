@@ -50,7 +50,7 @@ No local installation step is required, `npx` resolves and runs the package on d
 | `kooperativa_create_monitor` | `POST /monitors` | Subscribe to change events on a profile/company |
 | `kooperativa_delete_monitor` | `DELETE /monitors` | Remove a webhook monitor |
 
-Full parameter reference: [docs.kooperativa.io](https://docs.kooperativa.io), or the OpenAPI spec at `https://kooperativa.io/api/v1/openapi.json`.
+Full parameter reference: [docs.kooperativa.io](https://docs.kooperativa.io).
 
 ## Authentication
 

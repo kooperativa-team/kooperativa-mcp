@@ -1,8 +1,7 @@
 /**
  * Tool registrations for the Kooperativa MCP server.
  *
- * One tool per Kooperativa API endpoint (see https://docs.kooperativa.io / the
- * OpenAPI spec at https://kooperativa.io/api/v1/openapi.json). Descriptions
+ * One tool per Kooperativa API endpoint (see https://docs.kooperativa.io). Descriptions
  * are written for the model calling the tool, not for a human reading docs.
  */
 
