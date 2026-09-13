@@ -66,7 +66,7 @@ export function registerKooperativaTools(server: McpServer) {
     {
       title: "Kooperativa: enrich person",
       description:
-        "Look up a person's full professional profile (work history, education, skills, certifications, honors, publications, volunteering) from the Kooperativa data lake. Provide exactly one of linkedin_url, username, or id. Returns 404 if the profile hasn't been indexed yet (no on-demand live scrape).",
+        "Look up a person's full professional profile (work history, education, skills, certifications, honors, publications, volunteering) from the Kooperativa data lake. Provide exactly one of linkedin_url, username, or id. Free: included in the workspace license with no per-call charge. Returns 404 if the profile hasn't been indexed yet, in which case kooperativa_enrich_person_realtime can fetch it from the live source for $0.001.",
       inputSchema: {
         linkedin_url: z
           .string()
@@ -77,6 +77,23 @@ export function registerKooperativaTools(server: McpServer) {
       },
     },
     withErrorHandling((args: any) => kooperativa.get("/person", args)),
+  );
+
+  server.registerTool(
+    "kooperativa_enrich_person_realtime",
+    {
+      title: "Kooperativa: enrich person (realtime, $0.001)",
+      description:
+        "Fetch a person's profile from the live source instead of the Kooperativa data lake, so the answer reflects the profile as it is right now. COSTS $0.001 PER CALL, charged on top of the license, and every call is billed even when the profile is not found, because the lookup still happened. Prefer kooperativa_enrich_person, which is free and about 4x faster, and only use this one when that returned 404 or when its fetched_at is too old for the task. Provide exactly one of linkedin_url or username; there is no id parameter, because an internal id means nothing to a source that has never seen our data lake. The result is written back to the data lake, so a later kooperativa_enrich_person for the same person returns it for free. There is no cache in front of this tool: calling it twice for the same person bills twice, so do not loop over a list with it unless the spend is intended.",
+      inputSchema: {
+        linkedin_url: z
+          .string()
+          .optional()
+          .describe("Full profile URL, e.g. https://www.linkedin.com/in/satyanadella"),
+        username: z.string().optional().describe("Profile slug, the part after /in/. Fastest lookup."),
+      },
+    },
+    withErrorHandling((args: any) => kooperativa.get("/person/realtime", args)),
   );
 
   server.registerTool(
@@ -234,7 +251,7 @@ export function registerKooperativaTools(server: McpServer) {
     {
       title: "Kooperativa: enrich company",
       description:
-        "Look up a company's full profile (headcount, follower count, founding year, HQ address, industries, specialities, office locations) from the Kooperativa data lake. Provide exactly one of linkedin_url, username, company_id, or id. Returns 404 if not indexed yet.",
+        "Look up a company's full profile (headcount, follower count, founding year, HQ address, industries, specialities, office locations) from the Kooperativa data lake. Provide exactly one of linkedin_url, username, company_id, or id. Free: included in the workspace license with no per-call charge. Returns 404 if not indexed yet, in which case kooperativa_enrich_company_realtime can fetch it from the live source for $0.001.",
       inputSchema: {
         linkedin_url: z
           .string()
@@ -246,6 +263,23 @@ export function registerKooperativaTools(server: McpServer) {
       },
     },
     withErrorHandling((args: any) => kooperativa.get("/company", args)),
+  );
+
+  server.registerTool(
+    "kooperativa_enrich_company_realtime",
+    {
+      title: "Kooperativa: enrich company (realtime, $0.001)",
+      description:
+        "Fetch a company's profile from the live source instead of the Kooperativa data lake, so the answer reflects the company as it is right now. COSTS $0.001 PER CALL, charged on top of the license, and every call is billed even when the company is not found, because the lookup still happened. Prefer kooperativa_enrich_company, which is free and faster, and only use this one when that returned 404 or when its fetched_at is too old for the task. Provide exactly one of linkedin_url or username; neither company_id nor id is accepted, because an internal id means nothing to a source that has never seen our data lake. The result is written back to the data lake, so a later kooperativa_enrich_company for the same company returns it for free. There is no cache in front of this tool: calling it twice for the same company bills twice, so do not loop over a list with it unless the spend is intended.",
+      inputSchema: {
+        linkedin_url: z
+          .string()
+          .optional()
+          .describe("Full company profile URL, e.g. https://www.linkedin.com/company/stripe"),
+        username: z.string().optional().describe("Company slug, the part after /company/. Fastest lookup."),
+      },
+    },
+    withErrorHandling((args: any) => kooperativa.get("/company/realtime", args)),
   );
 
   server.registerTool(
