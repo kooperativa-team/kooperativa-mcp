@@ -17,7 +17,7 @@ Add the server to your MCP client's configuration:
       "command": "npx",
       "args": ["-y", "@kooperativa_team/mcp-server"],
       "env": {
-        "KOOPERATIVA_API_KEY": "kk_live_..."
+        "KOOPERATIVA_API_KEY": "ik_live_..."
       }
     }
   }
