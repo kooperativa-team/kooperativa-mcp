@@ -34,6 +34,78 @@ function withErrorHandling<Args extends unknown[], T>(fn: (...args: Args) => Pro
 
 const seniorityEnum = z.enum(["c-level", "vp", "director", "manager"]);
 
+/** Global guidance returned in the `initialize` response; the client reads it as a system-level brief. */
+export const KOOPERATIVA_MCP_INSTRUCTIONS = `
+Kooperativa is a B2B data API over professional profiles and companies. It holds structured
+people and company records (roles, education, skills, titles, firmographics, headcount) but
+deliberately NO contact data: no emails, no phone numbers. The only email capability is
+resolve_email, which maps an email you already have to a profile; it never returns a new address.
+
+Data model and quality. Read this before trusting an answer:
+- enrich_person / enrich_company return the FULL record from the data lake. search_people /
+  search_companies return previews from the search index. Both come from the same underlying data.
+- A 404 means "not in our index yet", NOT "does not exist". Never tell the user a subject does not
+  exist because you got a 404.
+- Headcount / employee-count figures can be stale or mislabeled for some companies. Treat extreme
+  values (e.g. "10001+") as suspicious and flag them instead of repeating them as fact.
+- Company-name search is full-text and returns noise: it matches similarly-named companies, agencies,
+  schools and unrelated firms. Always sanity-check returned company names against the user's intent
+  before presenting them as matches.
+- Seniority is derived from job-title text at index time; roughly half of titled profiles carry no
+  seniority. Operational roles such as "RevOps" usually classify as "manager", which the
+  decision_makers tool deliberately excludes (it covers c-level, vp, director only).
+- Records are refreshed on a ~90-day cycle, so a record can be up to 90 days old. When the subject is
+  recent or freshness matters, the realtime tool returns live data (it costs money, see Costs).
+- school_id on alumni lookups is still being backfilled onto older rows, so 0 alumni for a school_id
+  is not proof the school has no alumni.
+
+Choosing a tool:
+- enrich_person / enrich_company: the FULL record for one subject. Default for "tell me about X".
+- check_person / check_company: cheap existence probes. Use to test whether a subject is indexed
+  before an enrich or a paid realtime call.
+- search_people / search_companies: previews, for discovery by criteria.
+- colleagues, similar, current_employees, past_employees, headcount_by_seniority, hiring_signals,
+  decision_makers: derived lists; they need an id or company_id from a prior enrich/search.
+- resolve_email: the one email entry point; can be slow (external lookup).
+- monitors: webhook change subscriptions, not data queries.
+
+Search filters, get these exactly right:
+- People search has NO generic "query" field. Free text on a name is full_name; exact name parts are
+  first_name and last_name; job role is title; current employer is company (exact) or company_id.
+  Country uses "location" as ISO 2-letter codes (e.g. "US", "GB"), never full country names.
+  industry uses the PEOPLE taxonomy (e.g. "Computer Software").
+- Company search free text is company_name (full-text, noisy, see above). Country is "country"
+  (ISO 2-letter). industry uses the COMPANY taxonomy, which DIFFERS from people search ("Software
+  Development" for companies vs "Computer Software" for people). Never reuse a people industry value
+  in a company search.
+- headcount is an exact range string like "51 - 200".
+- At least one filter is required on both search tools. If a filter returns too few rows, widen it
+  rather than reporting zero as a fact about the whole market.
+- skills[] is OR-matching and tends to return few results; do not over-rely on it.
+
+Costs and limits:
+- enrich_person_realtime and enrich_company_realtime cost $0.001 per call and bill even on a 404.
+  Use them only when the free enrich returned 404 or when freshness matters; never loop them over a list.
+- search per_page is capped at 50; detail lists cap per_page at 100.
+
+Ids beat names:
+- Once you hold an id or company_id from any response, reuse it rather than re-searching by name.
+- For institution_alumni, prefer school_id over a school name: name matching is an exact hash of the
+  string as given, so "NYU" and "New York University" are different matches.
+
+Working professionally:
+- Distinguish verified facts from your inference. "Fit", "would buy", and product claims are your
+  judgment from a title/headline, not facts in the data. State them as estimates, not findings.
+- Do not guess a company's identity or domain. If a name or domain is ambiguous, flag the assumption
+  explicitly or ask the user rather than silently substituting one company for another.
+- For lead-generation or outreach tasks, ask for the ICP and the geographic target BEFORE searching
+  broadly; do not assume a global audience. When a geographic restriction is given, enforce it in
+  every filter (location/ISO codes) and exclude out-of-scope regions from the results.
+- Cross-check company-name matches against the user's intent, since the search is fuzzy.
+- When a number looks wrong (an improbable headcount, a suspicious date), flag it rather than
+  repeating it.
+`.trim();
+
 export function registerKooperativaTools(server: McpServer) {
   // ── Account ──────────────────────────────────────────────────────────
 
@@ -118,7 +190,9 @@ export function registerKooperativaTools(server: McpServer) {
       description:
         "Search the Kooperativa data lake of professional profiles using any combination of filters (title, company, location, industry, seniority, headcount, skills, tenure, recent job change, past employer, education). Filters combine with AND logic. Returns lightweight profile previews with pagination; pass a result's id to kooperativa_enrich_person for the full record.",
       inputSchema: {
-        query: z.string().optional().describe("Full-text search across name, title, and company."),
+        first_name: z.string().optional().describe("Exact first name, case-sensitive."),
+        last_name: z.string().optional().describe("Exact last name, case-sensitive."),
+        full_name: z.string().optional().describe("Free-text match against the person's full name."),
         title: z
           .string()
           .optional()
@@ -161,6 +235,7 @@ export function registerKooperativaTools(server: McpServer) {
         exclude_industries: z.array(z.string()).optional().describe("Hide people whose current industry is any of these."),
         past_company: z.string().optional().describe("Match people who previously worked at this company."),
         education: z.string().optional().describe("School/university name."),
+        education_id: z.string().optional().describe("LinkedIn numeric school ID, exact match; takes priority over education if both are set."),
         linkedin_url: z.string().optional().describe("Exact profile URL, resolves to a single person."),
         page: z.number().int().default(1).optional(),
         per_page: z.number().int().max(50).default(10).optional(),
@@ -244,6 +319,35 @@ export function registerKooperativaTools(server: McpServer) {
     withErrorHandling((args: any) => kooperativa.get("/person/job-changes", args)),
   );
 
+  server.registerTool(
+    "kooperativa_resolve_email",
+    {
+      title: "Kooperativa: resolve email to profile",
+      description:
+        "Resolve an email address to a professional profile. Maps the email to a profile URL, then returns the profile from Kooperativa's own data lake (same shape and freshness as /v1/person). Returns 404 if no profile is found for that email, in which case the email is queued for later backfill. This call can be slow, so use it only when an email is the starting point.",
+      inputSchema: {
+        email: z.string().describe("Email address to resolve, e.g. 'name@company.com'."),
+      },
+    },
+    withErrorHandling((args: any) => kooperativa.post("/resolve-email", args)),
+  );
+
+  server.registerTool(
+    "kooperativa_institution_alumni",
+    {
+      title: "Kooperativa: institution alumni",
+      description:
+        "List people whose education history includes a given school, paginated. Prefer school_id (exact) when you have it. School name matching hashes the string as given, so 'NYU' and 'New York University' are different matches; school_id wins if both are provided.",
+      inputSchema: {
+        school_id: z.string().optional().describe("LinkedIn numeric school ID, exact match; preferred."),
+        school: z.string().optional().describe("School name as it appears on LinkedIn; required if school_id is omitted."),
+        page: z.number().int().default(1).optional(),
+        per_page: z.number().int().max(100).default(25).optional(),
+      },
+    },
+    withErrorHandling((args: any) => kooperativa.get("/institution/alumni", args)),
+  );
+
   // ── Companies ────────────────────────────────────────────────────────
 
   server.registerTool(
@@ -305,7 +409,7 @@ export function registerKooperativaTools(server: McpServer) {
       description:
         "Search the Kooperativa data lake of companies by name, HQ location, industry, and headcount range. All filters are optional and combine with AND logic, but at least one filter is required. min_staff/max_staff are both inclusive and either can be omitted.",
       inputSchema: {
-        query: z.string().optional().describe("Full-text search across company name and tagline."),
+        company_name: z.string().optional().describe("Free-text search on company name."),
         country: z.string().optional().describe("HQ country code, ISO 2-letter, e.g. 'US'. Full names return 0 results."),
         city: z.string().optional().describe("HQ city name."),
         industry: z
@@ -380,6 +484,22 @@ export function registerKooperativaTools(server: McpServer) {
       },
     },
     withErrorHandling((args: any) => kooperativa.get("/company/hiring-signals", args)),
+  );
+
+  server.registerTool(
+    "kooperativa_company_decision_makers",
+    {
+      title: "Kooperativa: company decision makers",
+      description:
+        "People at a company with seniority c-level, vp, or director, re-sorted most-senior-first. Manager is deliberately excluded. seniority is a comma-separated subset of 'c-level,vp,director' (default: all three).",
+      inputSchema: {
+        company_id: z.string().describe("LinkedIn numeric company ID (from enrich_company or search_companies)."),
+        seniority: z.string().optional().describe("Comma-separated subset of c-level,vp,director, e.g. 'c-level,vp'. Defaults to all three."),
+        page: z.number().int().default(1).optional(),
+        per_page: z.number().int().max(100).default(25).optional(),
+      },
+    },
+    withErrorHandling((args: any) => kooperativa.get("/company/decision-makers", args)),
   );
 
   // ── Monitors (webhooks) ──────────────────────────────────────────────

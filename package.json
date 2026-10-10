@@ -1,10 +1,11 @@
 {
   "name": "@kooperativa_team/mcp-server",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "MCP server for the Kooperativa API — enrich and search professional profiles and companies, track hiring signals and job changes, and manage webhook monitors, directly from your AI assistant.",
   "type": "module",
   "bin": {
-    "kooperativa-mcp": "dist/index.js"
+    "kooperativa-mcp": "dist/index.js",
+    "kooperativa-mcp-http": "dist/http.js"
   },
   "publishConfig": {
     "access": "public"
@@ -25,6 +26,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "start": "node dist/index.js",
+    "start:http": "node dist/http.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
