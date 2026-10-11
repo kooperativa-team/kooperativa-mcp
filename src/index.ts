@@ -12,7 +12,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerKooperativaTools, KOOPERATIVA_MCP_INSTRUCTIONS } from "./tools.js";
+import { registerKooperativaTools, buildInstructions } from "./tools.js";
 import { VERSION } from "./version.js";
 import { missingKeyMessage, resolveApiKey } from "./credentials.js";
 import { login } from "./login.js";
@@ -30,7 +30,7 @@ async function main() {
 
   const server = new McpServer(
     { name: "kooperativa-mcp", version: VERSION },
-    { instructions: KOOPERATIVA_MCP_INSTRUCTIONS },
+    { instructions: buildInstructions() },
   );
 
   registerKooperativaTools(server);

@@ -1,6 +1,6 @@
 {
   "name": "@kooperativa_team/mcp-server",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "MCP server for the Kooperativa API: enrich and search professional profiles and companies, track hiring signals and job changes, and manage webhook monitors, directly from your AI assistant.",
   "type": "module",
   "bin": {

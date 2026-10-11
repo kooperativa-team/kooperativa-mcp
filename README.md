@@ -98,6 +98,24 @@ An environment value that does not look like a key is ignored, so an unexpanded 
 
 Never paste the key into a chat, a prompt, or a committed config file. Keep it in the `login` file, your MCP client's `env` block, or a secrets manager.
 
+## Toolsets
+
+By default the server registers all 24 tools. Set `KOOPERATIVA_MCP_TOOLSET=read` to register only the 18 read-only data tools: no real-time (metered) lookups, no monitors (webhook subscriptions) and no email-to-profile lookup. The plugin and extension listings for Kiro, Cursor and Claude use this set.
+
+```json
+{
+  "mcpServers": {
+    "kooperativa": {
+      "command": "npx",
+      "args": ["-y", "@kooperativa_team/mcp-server"],
+      "env": { "KOOPERATIVA_MCP_TOOLSET": "read" }
+    }
+  }
+}
+```
+
+Every tool carries a `title` and the MCP annotations `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`. Responses are compact JSON, to keep token use low.
+
 ## Self-hosting over Streamable HTTP
 
 The package also ships `kooperativa-mcp-http`, a stateless Streamable HTTP server for clients that connect to a URL instead of spawning a process.

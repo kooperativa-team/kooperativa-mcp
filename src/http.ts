@@ -26,7 +26,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { timingSafeEqual } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { registerKooperativaTools, KOOPERATIVA_MCP_INSTRUCTIONS } from "./tools.js";
+import { registerKooperativaTools, buildInstructions } from "./tools.js";
 import { VERSION } from "./version.js";
 
 const HOST = process.env.HOST ?? "127.0.0.1";
@@ -65,7 +65,7 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse): Prom
   }
 
   // Fresh server + transport per request: the stateless pattern.
-  const server = new McpServer({ name: "kooperativa-mcp", version: VERSION }, { instructions: KOOPERATIVA_MCP_INSTRUCTIONS });
+  const server = new McpServer({ name: "kooperativa-mcp", version: VERSION }, { instructions: buildInstructions() });
   registerKooperativaTools(server);
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
