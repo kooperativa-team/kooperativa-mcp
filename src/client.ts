@@ -1,12 +1,13 @@
 /**
  * Thin HTTP client for the Kooperativa API (https://kooperativa.io/api/v1).
  *
- * The API key is read once from the KOOPERATIVA_API_KEY environment variable
- * and never logged, echoed back to the model, or written anywhere. Every
- * request attaches it as a Bearer token.
+ * The API key comes from KOOPERATIVA_API_KEY or ~/.kooperativa/config.json (see credentials.ts)
+ * and is never logged or echoed back to the model. Every request attaches it as a Bearer token.
  */
 
-const BASE_URL = "https://kooperativa.io/api/v1";
+import { missingKeyMessage, resolveApiKey } from "./credentials.js";
+
+export const BASE_URL = "https://kooperativa.io/api/v1";
 
 export class KooperativaApiError extends Error {
   status: number;
@@ -21,13 +22,9 @@ export class KooperativaApiError extends Error {
 }
 
 function getApiKey(): string {
-  const key = process.env.KOOPERATIVA_API_KEY;
-  if (!key) {
-    throw new Error(
-      "KOOPERATIVA_API_KEY environment variable is not set. Add it to your MCP client config's `env` block. Get a key from https://kooperativa.io/api-keys",
-    );
-  }
-  return key;
+  const resolved = resolveApiKey();
+  if (resolved.key === null) throw new Error(missingKeyMessage(resolved.problem));
+  return resolved.key;
 }
 
 function buildQuery(params: Record<string, unknown> | undefined): string {

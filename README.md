@@ -77,9 +77,26 @@ If you want to rule out metered spend entirely, do not expose the two `*_realtim
 
 ## Authentication
 
-The server reads `KOOPERATIVA_API_KEY` from the environment. It is never logged, hardcoded, or transmitted anywhere other than as the `Authorization: Bearer` header on requests to `https://kooperativa.io/api/v1`.
+The server looks for the key in this order:
 
-Never paste the key into a chat, a prompt, or a committed config file. Keep it in your MCP client's `env` block or a secrets manager.
+1. `KOOPERATIVA_API_KEY` in the environment, when it has the shape of a real key (`ik_live_...`).
+2. The key stored in `~/.kooperativa/config.json` by the login command (same file the Kooperativa CLI uses).
+
+The key is never logged, hardcoded, or transmitted anywhere other than as the `Authorization: Bearer` header on requests to `https://kooperativa.io/api/v1`.
+
+### Store the key once with `login`
+
+Some MCP clients cannot pass a secret safely (they pass the text of a placeholder such as `${KOOPERATIVA_API_KEY}` instead of expanding it, or do not inherit your shell environment). For those, run this once in a terminal:
+
+```bash
+npx -y @kooperativa_team/mcp-server login
+```
+
+It asks for the key with input hidden, checks it against the API, and saves it with mode `0600`. It prints only your account email and license state, never the key. Restart your MCP client afterwards. The client config then needs no `env` block at all.
+
+An environment value that does not look like a key is ignored, so an unexpanded placeholder falls back to the stored key instead of causing a 401.
+
+Never paste the key into a chat, a prompt, or a committed config file. Keep it in the `login` file, your MCP client's `env` block, or a secrets manager.
 
 ## Self-hosting over Streamable HTTP
 
