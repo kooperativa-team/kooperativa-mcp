@@ -6,7 +6,7 @@
  * hiring signals, job changes, webhook monitors) as MCP tools over stdio.
  *
  * Auth: reads KOOPERATIVA_API_KEY from the environment. Never hardcode a key
- * here — set it in your MCP client's config `env` block. Get a key from
+ * here. Set it in your MCP client's config `env` block. Get a key from
  * https://kooperativa.io/api-keys
  */
 

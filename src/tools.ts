@@ -245,7 +245,7 @@ export function registerKooperativaTools(server: McpServer) {
         exclude_industries: z.array(z.string()).optional().describe("Hide people whose current industry is any of these."),
         past_company: z.string().optional().describe("Match people who previously worked at this company."),
         education: z.string().optional().describe("School/university name."),
-        education_id: z.string().optional().describe("LinkedIn numeric school ID, exact match; takes priority over education if both are set."),
+        education_id: z.string().optional().describe("Numeric school ID, exact match; takes priority over education if both are set."),
         linkedin_url: z.string().optional().describe("Exact profile URL, resolves to a single person."),
         page: z.number().int().default(1).optional(),
         per_page: z.number().int().max(50).default(10).optional(),
@@ -311,7 +311,7 @@ export function registerKooperativaTools(server: McpServer) {
     {
       title: "Kooperativa: recent job changes",
       description:
-        "People who recently started a new job — a strong outreach signal (new role = new budget, new vendor decisions). Optionally filter to people who previously worked at a specific company_id. Sorted most-recent-first.",
+        "People who recently started a new job, a strong outreach signal (new role = new budget, new vendor decisions). Optionally filter to people who previously worked at a specific company_id. Sorted most-recent-first.",
       inputSchema: {
         days: z
           .number()
@@ -349,8 +349,8 @@ export function registerKooperativaTools(server: McpServer) {
       description:
         "List people whose education history includes a given school, paginated. Prefer school_id (exact) when you have it. School name matching hashes the string as given, so 'NYU' and 'New York University' are different matches; school_id wins if both are provided.",
       inputSchema: {
-        school_id: z.string().optional().describe("LinkedIn numeric school ID, exact match; preferred."),
-        school: z.string().optional().describe("School name as it appears on LinkedIn; required if school_id is omitted."),
+        school_id: z.string().optional().describe("Numeric school ID, exact match; preferred."),
+        school: z.string().optional().describe("School name as it appears on the profile; required if school_id is omitted."),
         page: z.number().int().default(1).optional(),
         per_page: z.number().int().max(100).default(25).optional(),
       },
@@ -485,7 +485,7 @@ export function registerKooperativaTools(server: McpServer) {
     {
       title: "Kooperativa: company hiring signals",
       description:
-        "People who recently joined a company — a signal of growth, investment, or expansion. Sorted by join date descending, look-back window configurable in days (default 90, max 365).",
+        "People who recently joined a company, a signal of growth, investment, or expansion. Sorted by join date descending, look-back window configurable in days (default 90, max 365).",
       inputSchema: {
         company_id: z.string().describe("Numeric company ID."),
         days: z.number().int().max(365).default(90).optional().describe("Look-back window in days."),
@@ -503,7 +503,7 @@ export function registerKooperativaTools(server: McpServer) {
       description:
         "People at a company with seniority c-level, vp, or director, re-sorted most-senior-first. Manager is deliberately excluded. seniority is a comma-separated subset of 'c-level,vp,director' (default: all three).",
       inputSchema: {
-        company_id: z.string().describe("LinkedIn numeric company ID (from enrich_company or search_companies)."),
+        company_id: z.string().describe("Numeric company ID (from enrich_company or search_companies)."),
         seniority: z.string().optional().describe("Comma-separated subset of c-level,vp,director, e.g. 'c-level,vp'. Defaults to all three."),
         page: z.number().int().default(1).optional(),
         per_page: z.number().int().max(100).default(25).optional(),
