@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kooperativa-team/kooperativa-mcp",
+  "title": "Kooperativa.io",
+  "description": "Enrich and search people and companies, track hiring signals and job changes via Kooperativa.io",
+  "repository": {
+    "url": "https://github.com/kooperativa-team/kooperativa-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://kooperativa.io",
+  "version": "0.3.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@kooperativa_team/mcp-server",
+      "version": "0.3.1",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "KOOPERATIVA_API_KEY",
+          "description": "Kooperativa.io API key (ik_live_...). Or run `npx -y @kooperativa_team/mcp-server login` to store it locally.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
