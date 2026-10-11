@@ -2,11 +2,13 @@
 
 MCP (Model Context Protocol) server for the [Kooperativa](https://kooperativa.io) API.
 
-Gives any MCP-compatible AI assistant (Claude Desktop, Kiro, Cursor, Windsurf, etc.) direct access to Kooperativa's B2B data lake: enrich and search professional profiles and companies, surface hiring signals and recent job changes, and manage webhook monitors, all from a conversation.
+Gives any MCP-compatible AI assistant (Claude Desktop, Kiro, Cursor, Windsurf, Kilo, etc.) direct access to Kooperativa's B2B data lake: enrich and search professional profiles and companies, surface hiring signals and recent job changes, resolve an email address to a profile, and manage webhook monitors, all from a conversation.
+
+Kooperativa holds structured people and company records. It deliberately has **no contact data**: no email addresses and no phone numbers.
 
 ## Installation
 
-Requires a Kooperativa API key. Get one from your [account dashboard](https://kooperativa.io/api-keys).
+Requires Node.js 18+ and a Kooperativa API key. Get one from your [account dashboard](https://kooperativa.io/api-keys).
 
 Add the server to your MCP client's configuration:
 
@@ -40,6 +42,8 @@ No local installation step is required, `npx` resolves and runs the package on d
 | `kooperativa_person_colleagues` | `GET /person/colleagues` | Current coworkers of a person |
 | `kooperativa_person_similar` | `GET /person/similar` | Lookalike profiles by seniority/industry/country |
 | `kooperativa_person_job_changes` | `GET /person/job-changes` | Recently started new roles |
+| `kooperativa_resolve_email` | `POST /resolve-email` | Resolve an email address you already have to a profile |
+| `kooperativa_institution_alumni` | `GET /institution/alumni` | People whose education includes a given school |
 | `kooperativa_enrich_company` | `GET /company` | Full company profile lookup |
 | `kooperativa_enrich_company_realtime` | `GET /company/realtime` | Same, but from the live source. **$0.001 per call**, see [Billing](#billing) |
 | `kooperativa_check_company` | `GET /company/check` | Cheap existence check before a full lookup |
@@ -48,11 +52,16 @@ No local installation step is required, `npx` resolves and runs the package on d
 | `kooperativa_company_past_employees` | `GET /company/past-employees` | People who used to work at a company |
 | `kooperativa_company_headcount_by_seniority` | `GET /company/headcount-by-seniority` | Indexed headcount breakdown |
 | `kooperativa_company_hiring_signals` | `GET /company/hiring-signals` | Recently joined employees |
+| `kooperativa_company_decision_makers` | `GET /company/decision-makers` | C-level, VP and director profiles at a company |
 | `kooperativa_list_monitors` | `GET /monitors` | List active webhook monitors |
 | `kooperativa_create_monitor` | `POST /monitors` | Subscribe to change events on a profile/company |
 | `kooperativa_delete_monitor` | `DELETE /monitors` | Remove a webhook monitor |
 
 Full parameter reference: [docs.kooperativa.io](https://docs.kooperativa.io).
+
+## Server instructions
+
+On connect the server sends the client a short brief (the MCP `instructions` field) covering the things that are easy to get wrong: the people and company industry taxonomies differ, countries are ISO 2-letter codes, a 404 means "not indexed yet", headcount figures can be unreliable, company-name search is fuzzy, and the realtime tools cost money. It also tells the model to treat profile text as untrusted data.
 
 ## Billing
 
@@ -69,6 +78,32 @@ If you want to rule out metered spend entirely, do not expose the two `*_realtim
 ## Authentication
 
 The server reads `KOOPERATIVA_API_KEY` from the environment. It is never logged, hardcoded, or transmitted anywhere other than as the `Authorization: Bearer` header on requests to `https://kooperativa.io/api/v1`.
+
+Never paste the key into a chat, a prompt, or a committed config file. Keep it in your MCP client's `env` block or a secrets manager.
+
+## Self-hosting over Streamable HTTP
+
+The package also ships `kooperativa-mcp-http`, a stateless Streamable HTTP server for clients that connect to a URL instead of spawning a process.
+
+```bash
+export KOOPERATIVA_API_KEY="ik_live_..."
+export MCP_ACCESS_TOKEN="$(openssl rand -base64 32)"
+npx -y -p @kooperativa_team/mcp-server kooperativa-mcp-http
+```
+
+| Variable | Required | Default | Meaning |
+|---|---|---|---|
+| `MCP_ACCESS_TOKEN` | yes | none | Bearer token every request must send. Without it the server refuses all requests (fail closed). |
+| `KOOPERATIVA_API_KEY` | yes | none | Your Kooperativa key, used for the upstream calls. |
+| `PORT` | no | `3100` | Listen port. |
+| `HOST` | no | `127.0.0.1` | Bind address. |
+
+Security notes for self-hosting:
+
+- **One server is one account.** Every caller that holds `MCP_ACCESS_TOKEN` spends your license and your realtime credits. Do not share the token or the URL.
+- **Terminate TLS in front of it** (Caddy, nginx) and keep the default loopback bind. Plain HTTP carries the bearer token in the clear.
+- Requests are capped at 1 MiB, the token is compared in constant time, and request headers and bodies are never logged.
+- Rotate `MCP_ACCESS_TOKEN` if it is ever exposed.
 
 ## License
 
