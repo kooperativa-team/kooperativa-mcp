@@ -13,6 +13,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerKooperativaTools, KOOPERATIVA_MCP_INSTRUCTIONS } from "./tools.js";
+import { VERSION } from "./version.js";
 
 async function main() {
   if (!process.env.KOOPERATIVA_API_KEY) {
@@ -22,7 +23,7 @@ async function main() {
   }
 
   const server = new McpServer(
-    { name: "kooperativa-mcp", version: "0.2.0" },
+    { name: "kooperativa-mcp", version: VERSION },
     { instructions: KOOPERATIVA_MCP_INSTRUCTIONS },
   );
 
